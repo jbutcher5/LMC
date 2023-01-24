@@ -57,8 +57,7 @@ impl Interpreter {
     ) -> Result<(), LMCError> {
         self.ram
             .get_mut(register)
-            .map_or_else(|| Err(LMCError::NotEnoughRAM), f)?;
-        Ok(())
+            .map_or_else(|| Err(LMCError::NotEnoughRAM), f)
     }
 
     fn execute(&mut self) -> Result<(), LMCError> {
