@@ -1,4 +1,9 @@
 #[derive(Debug, Copy, Clone)]
+enum LMCError {
+    NotEnoughRAM,
+}
+
+#[derive(Debug, Copy, Clone)]
 enum Instr {
     Add(u16),
     Sub(u16),
@@ -10,7 +15,7 @@ enum Instr {
     Dat(u16),
     Inp,
     Out,
-    Hlt
+    Hlt,
 }
 
 impl Instr {
@@ -33,25 +38,66 @@ impl Instr {
 }
 
 struct Interpreter {
-    pc: u8,
-    acc: u8,
+    pc: usize,
+    acc: u16,
     ram: Vec<u16>,
 }
 
 impl Interpreter {
-    fn execute(&self) {
-        println!("{}", self.pc);
+    fn decode(&mut self, register: usize) -> Result<u16, LMCError> {
+        self.ram
+            .get(register)
+            .map_or_else(|| Err(LMCError::NotEnoughRAM), |value| Ok(*value))
+    }
 
+    fn decode_map(
+        &mut self,
+        register: usize,
+        f: impl FnOnce(&mut u16) -> Result<(), LMCError>,
+    ) -> Result<(), LMCError> {
+        self.ram
+            .get_mut(register)
+            .map_or_else(|| Err(LMCError::NotEnoughRAM), f)
+    }
+
+    fn execute(&mut self) -> Result<(), LMCError> {
+        let (operator, operand) = self
+            .decode(self.pc)
+            .map(|instr| (instr / 100, instr % 100))?;
+
+        self.pc += 1;
+
+        match (operator, operand) {
+            (0, 0) => Ok(()),
+            (1, addr) => {
+                let acc = self.acc;
+                self.decode_map(addr.into(), |x| {
+                    *x += acc;
+                    Ok(())
+                })
+            }
+            (2, addr) => {
+                let acc = self.acc;
+                self.decode_map(addr.into(), |x| {
+                    *x -= acc;
+                    Ok(())
+                })
+            }
+            _ => unimplemented!(),
+        }
     }
 }
 
 fn main() {
     use Instr::*;
-    let mut interp = Interpreter {pc: 0, acc: 0, ram:vec![0;99]};
+    let mut interp = Interpreter {
+        pc: 0,
+        acc: 2,
+        ram: vec![Add(1), Dat(12), Hlt]
+            .into_iter()
+            .map(Instr::encode)
+            .collect(),
+    };
+
     interp.execute();
-
-    let ram: Vec<u16> = vec![Add(1), Sub(2), Sta(6), Lda(3), Bra(4), Brz(5),  Brp(7), Out, Inp, Hlt].into_iter().map(Instr::encode).collect();
-
-    interp.ram = ram;
-
 }
