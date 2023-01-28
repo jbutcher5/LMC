@@ -1,3 +1,5 @@
+use std::{io, io::Write};
+
 #[derive(Debug, Copy, Clone)]
 enum LMCError {
     NotEnoughRAM,
@@ -104,6 +106,27 @@ impl Interpreter {
             self.acc = self.decode(operand as usize)?;
         } else if self.able_to_branch(operator) {
             self.pc = operator as usize;
+        } else if cir == 901 {
+            fn user_input() -> i32 {
+                let mut buffer: String = String::new();
+                print!("> ");
+                std::io::stdout()
+                    .flush()
+                    .expect("[ERROR] Failed to flush the buffer");
+                if io::stdin().read_line(&mut buffer).is_ok() {
+                    if let Ok(x) = buffer.trim().parse::<i32>() {
+                        x
+                    } else {
+                        println!("[ERROR] Failed to convert input to 32 bit signed int");
+                        user_input()
+                    }
+                } else {
+                    println!("[ERROR] Failed to get input");
+                    user_input()
+                }
+            }
+
+            self.acc = user_input();
         } else if operator == 0 {
             return Ok(());
         }
@@ -115,7 +138,7 @@ impl Interpreter {
 fn main() {
     use Instr::*;
 
-    let tokens = vec![Add(1), Dat(12), Hlt];
+    let tokens = vec![Inp, Sta(2), Dat(0), Hlt];
 
     let encoded = tokens.clone().into_iter().map(Instr::encode).collect();
 
@@ -137,4 +160,6 @@ fn main() {
     };
 
     interp.execute(reserved_memory).unwrap();
+
+    println!("RAM: {:?}", interp.ram);
 }
