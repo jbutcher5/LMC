@@ -1,6 +1,7 @@
 #[derive(Debug, Copy, Clone)]
 enum LMCError {
     NotEnoughRAM,
+    InvalidInstruction,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -61,6 +62,14 @@ impl Interpreter {
     }
 
     fn execute(&mut self) -> Result<(), LMCError> {
+        use LMCError::*;
+
+        let cir = self.decode(self.pc);
+
+        if (cir >= 999) {
+            return Err(InvalidInstruction);
+        };
+
         let (operator, operand) = self
             .decode(self.pc)
             .map(|instr| (instr / 100, instr % 100))?;
