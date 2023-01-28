@@ -127,6 +127,8 @@ impl Interpreter {
             }
 
             self.acc = user_input();
+        } else if cir == 902 {
+            println!("{}", self.acc);
         } else if operator == 0 {
             return Ok(());
         }
@@ -138,7 +140,7 @@ impl Interpreter {
 fn main() {
     use Instr::*;
 
-    let tokens = vec![Inp, Sta(2), Dat(0), Hlt];
+    let tokens = vec![Inp, Sta(2), Dat(0), Out, Hlt];
 
     let encoded = tokens.clone().into_iter().map(Instr::encode).collect();
 
