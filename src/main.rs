@@ -6,21 +6,21 @@ enum LMCError {
 
 #[derive(Debug, Copy, Clone)]
 enum Instr {
-    Add(u16),
-    Sub(u16),
-    Lda(u16),
-    Sta(u16),
-    Brp(u16),
-    Brz(u16),
-    Bra(u16),
-    Dat(u16),
+    Add(i32),
+    Sub(i32),
+    Lda(i32),
+    Sta(i32),
+    Brp(i32),
+    Brz(i32),
+    Bra(i32),
+    Dat(i32),
     Inp,
     Out,
     Hlt,
 }
 
 impl Instr {
-    fn encode(self) -> u16 {
+    fn encode(self) -> i32 {
         use Instr::*;
         match self {
             Add(x) => 100 + x,
@@ -40,21 +40,27 @@ impl Instr {
 
 struct Interpreter {
     pc: usize,
-    acc: u16,
-    ram: Vec<u16>,
+    acc: i32,
+    ram: Vec<i32>,
 }
 
 impl Interpreter {
-    fn decode(&mut self, register: usize) -> Result<u16, LMCError> {
+    fn decode(&mut self, register: usize) -> Result<i32, LMCError> {
         self.ram
             .get(register)
             .map_or_else(|| Err(LMCError::NotEnoughRAM), |value| Ok(*value))
     }
 
+    const fn able_to_branch(&self, operator: i32) -> bool {
+        return (operator == 6)
+            || (operator == 7 && self.acc == 0)
+            || (operator == 8 && self.acc >= 0);
+    }
+
     fn decode_map(
         &mut self,
         register: usize,
-        f: impl FnOnce(&mut u16) -> Result<(), LMCError>,
+        f: impl FnOnce(&mut i32) -> Result<(), LMCError>,
     ) -> Result<(), LMCError> {
         self.ram
             .get_mut(register)
@@ -78,24 +84,26 @@ impl Interpreter {
 
         if operator == 1 {
             let acc = self.acc;
-            self.decode_map(operand.into(), |x| {
+            self.decode_map(operand as usize, |x| {
                 *x += acc;
                 Ok(())
             })?;
         } else if operator == 2 {
             let acc = self.acc;
-            self.decode_map(operand.into(), |x| {
+            self.decode_map(operand as usize, |x| {
                 *x -= acc;
                 Ok(())
             })?;
         } else if operator == 3 {
             let acc = self.acc;
-            self.decode_map(operand.into(), |x| {
+            self.decode_map(operand as usize, |x| {
                 *x = acc;
                 Ok(())
             })?;
         } else if operator == 4 {
-            self.acc = self.decode(operand.into())?;
+            self.acc = self.decode(operand as usize)?;
+        } else if self.able_to_branch(operator) {
+            self.pc = operator as usize;
         } else if operator == 0 {
             return Ok(());
         }
