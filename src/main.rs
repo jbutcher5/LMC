@@ -61,12 +61,12 @@ impl Interpreter {
             .map_or_else(|| Err(LMCError::NotEnoughRAM), f)
     }
 
-    fn execute(&mut self) -> Result<(), LMCError> {
+    fn execute(&mut self, reserved_memory: Vec<usize>) -> Result<(), LMCError> {
         use LMCError::*;
 
-        let cir = self.decode(self.pc);
+        let cir = self.decode(self.pc)?;
 
-        if (cir >= 999) {
+        if cir >= 999 {
             return Err(InvalidInstruction);
         };
 
@@ -74,39 +74,59 @@ impl Interpreter {
             .decode(self.pc)
             .map(|instr| (instr / 100, instr % 100))?;
 
-        self.pc += 1;
+        self.pc += 1 + reserved_memory.contains(&(self.pc + 1)) as usize;
 
-        match (operator, operand) {
-            (0, 0) => Ok(()),
-            (1, addr) => {
-                let acc = self.acc;
-                self.decode_map(addr.into(), |x| {
-                    *x += acc;
-                    Ok(())
-                })
-            }
-            (2, addr) => {
-                let acc = self.acc;
-                self.decode_map(addr.into(), |x| {
-                    *x -= acc;
-                    Ok(())
-                })
-            }
-            _ => unimplemented!(),
+        if operator == 1 {
+            let acc = self.acc;
+            self.decode_map(operand.into(), |x| {
+                *x += acc;
+                Ok(())
+            })?;
+        } else if operator == 2 {
+            let acc = self.acc;
+            self.decode_map(operand.into(), |x| {
+                *x -= acc;
+                Ok(())
+            })?;
+        } else if operator == 3 {
+            let acc = self.acc;
+            self.decode_map(operand.into(), |x| {
+                *x = acc;
+                Ok(())
+            })?;
+        } else if operator == 4 {
+            self.acc = self.decode(operand.into())?;
+        } else if operator == 0 {
+            return Ok(());
         }
+
+        self.execute(reserved_memory)
     }
 }
 
 fn main() {
     use Instr::*;
+
+    let tokens = vec![Add(1), Dat(12), Hlt];
+
+    let encoded = tokens.clone().into_iter().map(Instr::encode).collect();
+
+    let reserved_memory: Vec<usize> =
+        tokens
+            .into_iter()
+            .enumerate()
+            .fold(vec![], |mut acc, (index, x)| {
+                if let Dat(_) = x {
+                    acc.push(index);
+                }
+                acc
+            });
+
     let mut interp = Interpreter {
         pc: 0,
         acc: 2,
-        ram: vec![Add(1), Dat(12), Hlt]
-            .into_iter()
-            .map(Instr::encode)
-            .collect(),
+        ram: encoded,
     };
 
-    interp.execute();
+    interp.execute(reserved_memory).unwrap();
 }
