@@ -1,4 +1,4 @@
-use lmc::*;
+use lmc::{eval::*, *};
 
 fn main() {
     use Instr::*;
@@ -18,12 +18,7 @@ fn main() {
                 acc
             });
 
-    let mut interp = Interpreter {
-        pc: 0,
-        acc: 0,
-        ram: encoded,
-    };
-
+    let mut interp = Interpreter::new(encoded, 20).unwrap();
     interp.execute(reserved_memory).unwrap();
 
     println!("RAM: {:?}", interp.ram);
