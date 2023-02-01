@@ -1,10 +1,17 @@
-use lmc::{eval::*, *};
+use lmc::{eval::*, parser::parser, *};
 
 fn main() {
     use Instr::*;
 
-    let tokens = vec![Inp, Sta(2), Dat(0), Out, Hlt];
-
+    let tokens = parser(
+        "
+INP
+STA x
+x DAT 5
+        "
+        .to_string(),
+    )
+    .unwrap();
     let encoded = tokens.clone().into_iter().map(Instr::encode).collect();
 
     let reserved_memory: Vec<usize> =

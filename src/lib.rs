@@ -1,4 +1,5 @@
 pub mod eval;
+pub mod parser;
 
 #[derive(Debug, Copy, Clone)]
 pub enum LMCError {
